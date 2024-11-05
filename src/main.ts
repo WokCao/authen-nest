@@ -9,7 +9,7 @@ async function bootstrap() {
     whitelist: true, // Automatically strip properties that do not have decorators
     forbidNonWhitelisted: true, // Return an error if non-whitelisted properties are present
   }));
-  app.enableCors({ "origin": "https://wokcao.github.io/authen-fe", "methods": "*" })
+  app.enableCors({ "origin": "https://wokcao.github.io", "methods": "*" })
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
