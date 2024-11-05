@@ -7,24 +7,32 @@ import { User } from 'src/users/users.entity';
 
 @Injectable()
 export class AuthService {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   async login(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.login(email, pass);
-    if (user === null) {
-      throw new UnauthorizedException();
+    try {
+      const user = await this.usersService.login(email, pass);
+      if (user === null) {
+        throw new UnauthorizedException();
+      }
+      const { password, ...result } = user;
+      // TODO: Generate a JWT and return it here
+      // instead of the user object
+      return result;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
     }
-    const { password, ...result } = user;
-    // TODO: Generate a JWT and return it here
-    // instead of the user object
-    return result;
   }
 
   async register(registerUserDto: RegisterUserDto): Promise<User> {
     try {
       return await this.usersService.register(registerUserDto);
     } catch (error) {
-      throw new Error(error);
+      if (error.status === 409) {
+        throw new ConflictException('Email already exists');
+      } else {
+        throw new InternalServerErrorException(error);
+      }
     }
   }
 }

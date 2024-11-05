@@ -1,4 +1,4 @@
-import { Body, Controller, Post, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Post, HttpCode, HttpStatus, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from 'src/users/dto/register-user.dto';
 import { User } from 'src/users/users.entity';
@@ -11,7 +11,7 @@ export class AuthController {
   @Post('login')
   async login(@Body() signInDto: Record<string, any>) {
     const user = await this.authService.login(signInDto.email, signInDto.password);
-    return user;
+    return { user, message: 'Success' };
   }
 
   @HttpCode(HttpStatus.CREATED)
@@ -21,7 +21,11 @@ export class AuthController {
       const user = await this.authService.register(registerUserDto);
       return { user, message: 'User registered successfully' };
     } catch (error) {
-      throw new BadRequestException(error.message);
+      if (error.status === 409) {
+        throw new ConflictException(error.message);
+      } else {
+        throw new InternalServerErrorException(error.message);
+      }
     }
   }
 }

@@ -10,15 +10,19 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async login(email: string, password: string) {
     // Check valid email and correct password, if there is no user -> login failed
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (user && await bcrypt.compare(password, user.password)) {
-      return user;
+    try {
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (user && await bcrypt.compare(password, user.password)) {
+        return user;
+      }
+      return null;
+    } catch (error) {
+      throw new InternalServerErrorException('Database errors occur. Please try again...');
     }
-    return null;
   }
 
   async register(registerUserDto: RegisterUserDto): Promise<User> {
