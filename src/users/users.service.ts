@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, ConflictException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './users.entity';
@@ -16,11 +16,18 @@ export class UsersService {
     // Check valid email and correct password, if there is no user -> login failed
     try {
       const user = await this.userRepository.findOne({ where: { email } });
+
+      if (user === null) {
+        throw new UnauthorizedException('Email doesn\'t exist');
+      }
+
       if (user && await bcrypt.compare(password, user.password)) {
         return user;
       }
-      return null;
+      
+      throw new UnauthorizedException('Password is wrong');
     } catch (error) {
+      if (error.status === 401) throw new UnauthorizedException(error.message);
       throw new InternalServerErrorException('Database errors occur. Please try again...');
     }
   }

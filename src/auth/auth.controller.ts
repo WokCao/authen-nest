@@ -1,4 +1,4 @@
-import { Body, Controller, Post, HttpCode, HttpStatus, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Body, Controller, Post, HttpCode, HttpStatus, BadRequestException, ConflictException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from 'src/users/dto/register-user.dto';
 import { User } from 'src/users/users.entity';
@@ -10,8 +10,16 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() signInDto: Record<string, any>) {
-    const user = await this.authService.login(signInDto.email, signInDto.password);
-    return { user, message: 'Success' };
+    try {
+      const user = await this.authService.login(signInDto.email, signInDto.password);
+      return { user, message: 'Success' };
+    } catch (error) {
+      if (error.status === 401) {
+        throw new UnauthorizedException(error.message);
+      } else {
+        throw new InternalServerErrorException(error.message);
+      }
+    }
   }
 
   @HttpCode(HttpStatus.CREATED)
