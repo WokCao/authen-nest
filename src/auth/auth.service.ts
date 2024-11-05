@@ -1,14 +1,17 @@
 
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { ConflictException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { RegisterUserDto } from 'src/users/dto/register-user.dto';
+import * as bcrypt from 'bcryptjs';
+import { UsersService } from 'src/users/users.service';
+import { User } from 'src/users/users.entity';
 
 @Injectable()
 export class AuthService {
   constructor(private usersService: UsersService) {}
 
-  async signIn(username: string, pass: string): Promise<any> {
-    const user = await this.usersService.findOne(username);
-    if (user?.password !== pass) {
+  async login(email: string, pass: string): Promise<any> {
+    const user = await this.usersService.login(email, pass);
+    if (user === null) {
       throw new UnauthorizedException();
     }
     const { password, ...result } = user;
@@ -17,13 +20,11 @@ export class AuthService {
     return result;
   }
 
-  async register(username: string, pass: string): Promise<any> {
-    let result = null;
+  async register(registerUserDto: RegisterUserDto): Promise<User> {
     try {
-        result = await this.usersService.addOne(username, pass);
+      return await this.usersService.register(registerUserDto);
     } catch (error) {
-        throw new ConflictException(error.message);
+      throw new Error(error);
     }
-    return result;
   }
 }

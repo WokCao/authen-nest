@@ -1,35 +1,42 @@
-
-import { Injectable } from '@nestjs/common';
-
-// This should be a real class/interface representing a user entity
-export type User = any;
+import { Injectable, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './users.entity';
+import { RegisterUserDto } from './dto/register-user.dto';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
-  private readonly users = [
-    {
-      userId: 1,
-      username: 'john',
-      password: 'changeme',
-    },
-    {
-      userId: 2,
-      username: 'maria',
-      password: 'guess',
-    },
-  ];
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
-  async findOne(username: string): Promise<User | undefined> {
-    return this.users.find(user => user.username === username);
+  async login(email: string, password: string) {
+    // Check valid email and correct password, if there is no user -> login failed
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user && await bcrypt.compare(password, user.password)) {
+      return user;
+    }
+    return null;
   }
 
-  async addOne(username: string, pass: string) {
-    const user = await this.findOne(username);
-    if (user) {
-      throw new Error('Username already exists');
+  async register(registerUserDto: RegisterUserDto): Promise<User> {
+    const { email, password } = registerUserDto;
+
+    // Hash password before saving to postgresql
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = this.userRepository.create({ email, password: hashedPassword });
+
+    try {
+      return await this.userRepository.save(user);
+    } catch (error) {
+      if (error.code === '23505') {
+        // Duplicate username or email error code in PostgreSQL
+        throw new ConflictException('Email already exists');
+      } else {
+        throw new InternalServerErrorException('Database errors occur. Please try again...');
+      }
     }
-    const newUser = { userId: Date.now(), username, password: pass };
-    this.users.push(newUser);
-    return newUser;
   }
 }
